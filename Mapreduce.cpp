@@ -1,6 +1,3 @@
-/* LAB 2 - MapReduce
- 	Eric Champagne & Zachary Berman */
-
 /* INCLUDES:*/
 #include <iostream>
 #include <fstream>
@@ -38,7 +35,7 @@ class BoundedBuffer{
 		/* add data for a word unless the size is at the maximum */
 		void enqueue(data word){
 			pthread_mutex_lock(&bufferLock); 			// lock because modifying a shared data structure
-			while(buffer.size() == MAXSIZE){  
+			while(buffer.size() == MAXSIZE){
 				pthread_cond_wait(&full, &bufferLock); 	// wait while the buffer is full
 			}
 			this->buffer.push_back(word); 				// if here, the buffer is cannot be full
@@ -77,14 +74,14 @@ class Node{
 			this->word = theData.word; 					// although word is in the data struct already, a word field is added for simplicity
 			this->location.push_back(theData); 			// data struct contains fileName/lineNumber already
 			this->left = left;
-			this->right = right;  
+			this->right = right;
 		}
 		/* toString method for easily printing the output of a node as word: fileName, lineNum; fileName, lineNum... etc */
 		string toString(){
 			string output;
 			output = this->word;
 			for(int i = 0; i<this->location.size();i++){ // concatenate fileNames and lineNums for the word
-				output += " " + this->location.at(i).fileName + ", " 
+				output += " " + this->location.at(i).fileName + ", "
 				+ this->location.at(i).lineNum + "; ";
 			}
 
@@ -130,7 +127,7 @@ Node* invertedIndex = NULL;
 // use this list to 'send' data to the i'th reducer thread
 vector<BoundedBuffer> buffers;
 
-/* mapper method used in Mapper Thread creation: 
+/* mapper method used in Mapper Thread creation:
 	Reads words from file and sends to a reducer thread's buffer to be processed  */
 void* mapper(void* file){
 	string line;
@@ -140,8 +137,8 @@ void* mapper(void* file){
 	int str_hash;
 	if(ifs.is_open()){  						// If the stream is open, continue getting the next lines & enqueue them
 		while(getline(ifs, line)){
-			currentLineNum++; 
-			string str = line; 
+			currentLineNum++;
+			string str = line;
 			tr1::hash<string> hash_fn;			// Hash the word. Determines which reducer threads buffer it's send to
 			str_hash = (int) hash_fn(str) % buffers.size(); // this is done so all the words aren't sent to the same buffer
 			// Add word's data
@@ -149,7 +146,7 @@ void* mapper(void* file){
 			dataObj.fileName = fileName;
 			// Convert int to string for saving in dataStruct
 			stringstream ss;
-			ss << currentLineNum; 
+			ss << currentLineNum;
 			string tempLN = ss.str();
 			dataObj.lineNum = tempLN;
 			dataObj.word = str;
@@ -161,27 +158,27 @@ void* mapper(void* file){
 	pthread_mutex_lock(&mapperLock);			// Lock because modifying a global variable
 	activeMappers--; 							// Mapper is done so reduce the number of threads before completion
 	pthread_mutex_unlock(&mapperLock);		// Done modifying, unlock
-	
+
 	if(activeMappers == 0){						// check the number of mappers, if this is the last one
 		data end;								// fill a data struct with empty string and enqueue it to all buffers
-		end.word = emptyString;					// so any waiting reducer threads are not stuck on the empty cond. variable 
+		end.word = emptyString;					// so any waiting reducer threads are not stuck on the empty cond. variable
 		end.fileName = emptyString;
 		end.lineNum = emptyString;
-		for(int i = 0; i<buffers.size();i++){ 
-				buffers.at(i).enqueue(end);		
+		for(int i = 0; i<buffers.size();i++){
+				buffers.at(i).enqueue(end);
 		}
 	}
-	
+
 }
 /* reducer method used in Reducer Thread creation:
 	takes the next word from the it's buffer and adds it to the inverted index data structure*/
 void* reducer(void* ID){
 	int reducerID = (int)ID; 										// Used to determine which buffer is associated with which thread
 	pthread_mutex_lock(&treeLock); 									// Lock because the shared invertedIndex data structure is modified
-	while(!buffers.at(reducerID).isEmpty() || activeMappers > 0){ 	// runs while there is still something in the buffer 
+	while(!buffers.at(reducerID).isEmpty() || activeMappers > 0){ 	// runs while there is still something in the buffer
 																	// or there is a mapper->something could be in the buffer in the future
 		data dataO;
-		
+
 		dataO = buffers.at(reducerID).dequeue();					// get next thing from buffer
 		if(dataO.word.compare(emptyString) != 0 && dataO.fileName.compare(emptyString) != 0 && dataO.lineNum.compare(emptyString) != 0){
 			invertedIndex = invertedIndex->insert(invertedIndex, dataO); // this is the check put in so that the empty string data object put in to free threads
@@ -193,7 +190,7 @@ void* reducer(void* ID){
 
 
 
-/* MAIN method. User inputs number of mapper and reducer threads to create on a set of files. 
+/* MAIN method. User inputs number of mapper and reducer threads to create on a set of files.
 	Then the program waits for these to complete and outputs the contents of the InvertedIndex data structure. */
 int main(int argc, const char* argv[]){
 
@@ -201,7 +198,7 @@ int main(int argc, const char* argv[]){
 	string mS;
 	getline(cin, mS);
 	int m; 							// Number of mapper threads
-	m = atoi(mS.c_str());			// Convert string input to integer 
+	m = atoi(mS.c_str());			// Convert string input to integer
 	activeMappers = m; 				// Initialize shared counter variable to # of mapper threads
 	vector<string> fileNames;		// Create vector to store the filenames
 	for(int i = 1; i<=m; i++){		// Fill the list of fileNames
@@ -219,7 +216,7 @@ int main(int argc, const char* argv[]){
 
 	pthread_t mapperThreads[m];		// Declare array of mapper threads
 	pthread_t reducerThreads[n];	// Declare array of reducer threads
-	
+
 	// Initialize locks & condition variables
 	pthread_mutex_init(&bufferLock, NULL);
 	pthread_cond_init(&empty, NULL);
